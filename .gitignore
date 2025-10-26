@@ -1,0 +1,17 @@
+# Python virtual environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Local environment files
+.env
+quiz_bot.db
+
+# IDE configs
+.vscode/
+.idea/
+
+# Logs and caches
+*.log
+.cache/
