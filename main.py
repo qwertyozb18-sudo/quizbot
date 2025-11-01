@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 import asyncio
 import logging
 import os
@@ -28,11 +31,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID")
+ADMIN_IDS_ENV = os.getenv("ADMIN_IDS", "")
 CHANNEL_ID_ENV = os.getenv("CHANNEL_ID")
 
 # convert ADMIN_ID to str for safe comparison
-ADMIN_ID = str(ADMIN_ID) if ADMIN_ID is not None else None
+ADMIN_IDS = [aid.strip() for aid in ADMIN_IDS_ENV.split(",") if aid.strip()]
 CHANNEL_ID = int(CHANNEL_ID_ENV) if CHANNEL_ID_ENV else None
 
 if not BOT_TOKEN:
@@ -118,7 +121,7 @@ async def cmd_start(message: types.Message):
         "/grouprating - Guruh reytingi\n\n"
         "Har bir to‘g‘ri javob uchun 1 🪙tanga olasiz!"
     )
-    if ADMIN_ID and message.from_user and str(message.from_user.id) == ADMIN_ID:
+    if ADMIN_IDS and message.from_user and str(message.from_user.id) in ADMIN_IDS:
         text += "\n\n🔧 <b>Admin komandalar:</b>\n/addquestion - Savol qo‘shish\n/addquestions - Bir nechta savol qo‘shish\n/addproject - Yangi fan qo‘shish\n/deletequestion - Savol o‘chirish\n/deleteproject - Fan o‘chirish"
     await message.answer(text, parse_mode="HTML")
 
@@ -384,7 +387,7 @@ async def haftalik_reyting_komanda(message: types.Message):
 # ==== ADMIN: addproject, addquestion (single), addquestions (bulk) ====
 @dp.message(Command("addproject"))
 async def cmd_add_project(message: types.Message, state: FSMContext):
-    if not ADMIN_ID or not message.from_user or str(message.from_user.id) != ADMIN_ID:
+    if not ADMIN_IDS or not message.from_user or str(message.from_user.id) not in ADMIN_IDS:
         await message.answer("❌ Bu komanda faqat admin uchun!")
         return
 
@@ -412,7 +415,7 @@ async def process_project_subject_key(message: types.Message, state: FSMContext)
 # --- /addquestion (single) ---
 @dp.message(Command("addquestion"))
 async def cmd_add_question(message: types.Message, state: FSMContext):
-    if not ADMIN_ID or not message.from_user or str(message.from_user.id) != ADMIN_ID:
+    if not ADMIN_IDS or not message.from_user or str(message.from_user.id) not in ADMIN_IDS:
         await message.answer("❌ Bu komanda faqat admin uchun!")
         return
 
@@ -481,7 +484,7 @@ async def process_correct_option(message: types.Message, state: FSMContext):
 # --- /addquestions (bulk) ---
 @dp.message(Command("addquestions"))
 async def cmd_addquestions(message: types.Message, state: FSMContext):
-    if not ADMIN_ID or not message.from_user or str(message.from_user.id) != ADMIN_ID:
+    if not ADMIN_IDS or not message.from_user or str(message.from_user.id) not in ADMIN_IDS:
         await message.answer("❌ Bu komanda faqat admin uchun!")
         return
     await message.answer("📚 Qaysi fan uchun savollar qo‘shmoqchisiz? (fan nomini yozing):")
@@ -539,7 +542,7 @@ async def process_questions_bulk(message: types.Message, state: FSMContext):
 # ==== DELETE handlers ====
 @dp.message(Command("deletequestion"))
 async def cmd_delete_question(message: types.Message, state: FSMContext):
-    if not ADMIN_ID or not message.from_user or str(message.from_user.id) != ADMIN_ID:
+    if not ADMIN_IDS or not message.from_user or str(message.from_user.id) not in ADMIN_IDS:
         await message.answer("❌ Bu komanda faqat admin uchun!")
         return
     await message.answer("🧾 O‘chirmoqchi bo‘lgan savol matnini yuboring (qism matn):")
@@ -591,7 +594,7 @@ async def confirm_delete_question(message: types.Message, state: FSMContext):
 
 @dp.message(Command("deleteproject"))
 async def cmd_delete_project(message: types.Message, state: FSMContext):
-    if not ADMIN_ID or not message.from_user or str(message.from_user.id) != ADMIN_ID:
+    if not ADMIN_IDS or not message.from_user or str(message.from_user.id) not in ADMIN_IDS:
         await message.answer("❌ Bu komanda faqat admin uchun!")
         return
     subjects = list(custom_subjects.keys()) or []
