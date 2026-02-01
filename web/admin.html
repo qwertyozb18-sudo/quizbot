@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QuizBot Admin Panel</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #000000);
+            --sidebar-bg: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            --card-bg: var(--tg-theme-secondary-bg-color, #ffffff);
+            --primary: var(--tg-theme-button-color, #2481cc);
+            --primary-text: var(--tg-theme-button-text-color, #ffffff);
+            --danger: #ff4d4d;
+            --success: #2ecc71;
+            --border: rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 250px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .sidebar h2 {
+            margin-top: 0;
+            font-size: 20px;
+            margin-bottom: 30px;
+            color: var(--primary);
+        }
+
+        .nav-link {
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        .nav-link:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: var(--primary-text);
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        h1 {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+            margin-top: 0;
+        }
+
+        /* CARDS (Dashboard) */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #777;
+            font-size: 14px;
+        }
+
+        /* TABS (In sections) */
+        .sub-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .sub-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+        }
+
+        .sub-tab.active {
+            border-bottom-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* FORMS */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button.btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        button.btn.danger {
+            background: var(--danger);
+        }
+
+        button.btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* LISTS (Search results, withdrawals) */
+        .list-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-info {
+            flex: 1;
+            margin-right: 15px;
+        }
+
+        .list-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .list-sub {
+            font-size: 13px;
+            color: #777;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge.pending {
+            background: orange;
+            color: white;
+        }
+
+        .badge.approved {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge.rejected {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* LOADING OVERLAY */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            font-weight: bold;
+            display: none;
+        }
+
+        /* MOBILE RESPONSIVE */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 60px;
+                flex-direction: row;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                align-items: center;
+                padding: 0 10px;
+                overflow-x: auto;
+            }
+
+            .sidebar h2 {
+                display: none;
+            }
+
+            .nav-link {
+                margin-bottom: 0;
+                margin-right: 10px;
+                white-space: nowrap;
+            }
+
+            .main {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loader">Yuklanmoqda...</div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <div class="nav-link active" onclick="showSection('dashboard', this)">
+            <span class="nav-icon">📊</span> Dashboard
+        </div>
+        <div class="nav-link" onclick="showSection('admin', this)">
+            <span class="nav-icon">🛠</span> Admin
+        </div>
+        <div class="nav-link" onclick="showSection('tanga', this)">
+            <span class="nav-icon">💰</span> Tanga
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main">
+
+        <!-- DASHBOARD -->
+        <div id="section-dashboard" class="section active">
+            <h1>Statistika</h1>
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Jami Savollar</div>
+                    <div class="stat-val" id="cnt-questions">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Aktiv Foydalanuvchilar (7 kun)</div>
+                    <div class="stat-val" style="color:var(--success)" id="cnt-active">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Noaktiv Foydalanuvchilar</div>
+                    <div class="stat-val" style="color:var(--danger)" id="cnt-inactive">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Umumiy Foydalanuvchilar</div>
+                    <div class="stat-val" id="cnt-users">0</div>
+                </div>
+            </div>
+            <button class="btn" style="margin-top:20px;" onclick="loadDashboard()">🔄 Yangilash</button>
+        </div>
+
+        <!-- ADMIN -->
+        <div id="section-admin" class="section">
+            <h1>Admin Boshqaruvi</h1>
+
+            <div class="sub-tabs">
+                <div class="sub-tab active" onclick="showAdminTab('add', this)">Savol qo‘shish</div>
+                <div class="sub-tab" onclick="showAdminTab('manage', this)">Savollar</div>
+                <div class="sub-tab" onclick="showAdminTab('subjects', this)">Fanlar</div>
+            </div>
+
+            <!-- ADD QUESTION -->
+            <div id="adm-tab-add" class="admin-tab active">
+                <h3>Savol qo‘shish turi:</h3>
+                <div style="margin-bottom:20px;">
+                    <label><input type="radio" name="addtype" value="single" checked onchange="toggleAddType()">
+                        Donalab</label>
+                    <label><input type="radio" name="addtype" value="txt" onchange="toggleAddType()"> TXT (Ko‘p)</label>
+                    <label><input type="radio" name="addtype" value="files" onchange="toggleAddType()"> 2 Fayl
+                        (Savol+Javob)</label>
+                </div>
+
+                <div class="form-group">
+                    <label>Fan (Mavzu)</label>
+                    <select id="add-subject"></select>
+                </div>
+
+                <!-- SINGLE FORM -->
+                <div id="form-single">
+                    <div class="form-group">
+                        <label>Savol Matni</label>
+                        <textarea id="q-text" rows="3"></textarea>
+                    </div>
+                    <div class="form-group"><input type="text" id="q-opt1" placeholder="Variant A"></div>
+                    <div class="form-group"><input type="text" id="q-opt2" placeholder="Variant B"></div>
+                    <div class="form-group"><input type="text" id="q-opt3" placeholder="Variant C"></div>
+                    <div class="form-group"><input type="text" id="q-opt4" placeholder="Variant D"></div>
+                    <div class="form-group">
+                        <label>To‘g‘ri Javob</label>
+                        <select id="q-correct">
+                            <option value="0">A</option>
+                            <option value="1">B</option>
+                            <option value="2">C</option>
+                            <option value="3">D</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="addSingleQuestion()">Saqlash</button>
+                </div>
+
+                <!-- TXT FORM -->
+                <div id="form-txt" style="display:none;">
+                    <p style="font-size:13px; color:#666;">
+                        Format: <code>Savol | v1, v2, v3, v4 | javob_raqami (1-4 yoki qiymat)</code><br>
+                        Har bir savol yangi qatordan.
+                    </p>
+                    <div class="form-group">
+                        <textarea id="bulk-text" style="height:200px;" placeholder="Paste text here..."></textarea>
+                    </div>
+                    <button class="btn" onclick="addBulkText()">Yuklash</button>
+                </div>
+
+                <!-- FILES FORM -->
+                <div id="form-files" style="display:none;">
+                    <p style="font-size:13px; color:#666;">
+                        1. Savollar fayli (Har bir savol va variantlar tartib bilan)<br>
+                        2. Javoblar fayli (Har bir qatorga to‘g‘ri javob: a, b, c, d)<br>
+                        Hozircha faqat TXT kiritish (Manual Copy-Paste) ishonchliroq. Fayl yuklash keyingi versiyada.
+                    </p>
+                    <div class="form-group">
+                        <label>Savollar Matni (Fayldan nusxa oling)</label>
+                        <textarea id="file-q-content" style="height:150px;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Javoblar Matni (Fayldan nusxa oling)</label>
+                        <textarea id="file-a-content" style="height:100px;"></textarea>
+                    </div>
+                    <button class="btn" onclick="addBulkPairs()">Yuklash</button>
+                </div>
+            </div>
+
+            <!-- MANAGE QUESTIONS (SEARCH & DELETE) -->
+            <div id="adm-tab-manage" class="admin-tab" style="display:none;">
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <input type="text" id="search-q" placeholder="Qidirish (Matn yoki ID)..." style="flex:1;">
+                    <select id="search-subject" style="width:150px;">
+                        <option value="">Barcha Fanlar</option>
+                    </select>
+                    <button class="btn" onclick="searchQuestions()">Qidirish</button>
+                </div>
+                <div id="search-results"></div>
+            </div>
+
+            <!-- SUBJECTS -->
+            <div id="adm-tab-subjects" class="admin-tab" style="display:none;">
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <input type="text" id="new-subj" placeholder="Yangi fan nomi (kalit)">
+                    <button class="btn" onclick="addSubject()">Qo‘shish</button>
+                </div>
+                <h3>Mavjud Fanlar:</h3>
+                <div id="subjects-list"></div>
+            </div>
+        </div>
+
+        <!-- TANGA (COIN) -->
+        <div id="section-tanga" class="section">
+            <h1>Tanga Tizimi</h1>
+
+            <div class="card" style="padding:15px; margin-bottom:20px; background:#eef;">
+                <h3>Kurs Sozlamasi</h3>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span>1 Birlik = </span>
+                    <input type="number" id="coin-rate" style="width:100px;">
+                    <span>Tanga</span>
+                    <button class="btn" onclick="saveRate()">Saqlash</button>
+                </div>
+            </div>
+
+            <h3>To'lov Arizalari</h3>
+            <button class="btn" onclick="loadWithdrawals()" style="margin-bottom:10px;">🔄 Yangilash</button>
+            <div id="withdrawals-list">
+                <!-- Items -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = "/api/admin"; // We will implement handlers at this base
+
+        // --- NAVIGATION ---
+        function showSection(id, el) {
+            document.querySelectorAll('.section').forEach(d => d.classList.remove('active'));
+            document.getElementById('section-' + id).classList.add('active');
+
+            document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+            if (el) el.classList.add('active');
+
+            if (id === 'dashboard') loadDashboard();
+            if (id === 'admin') loadSubjects(); // Preload subjects
+            if (id === 'tanga') { loadRate(); loadWithdrawals(); }
+        }
+
+        function showAdminTab(id, el) {
+            document.querySelectorAll('.admin-tab').forEach(d => d.style.display = 'none');
+            document.getElementById('adm-tab-' + id).style.display = 'block';
+
+            document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+            if (el) el.classList.add('active');
+        }
+
+        function toggleAddType() {
+            const type = document.querySelector('input[name="addtype"]:checked').value;
+            document.getElementById('form-single').style.display = 'none';
+            document.getElementById('form-txt').style.display = 'none';
+            document.getElementById('form-files').style.display = 'none';
+
+            if (type === 'single') document.getElementById('form-single').style.display = 'block';
+            if (type === 'txt') document.getElementById('form-txt').style.display = 'block';
+            if (type === 'files') document.getElementById('form-files').style.display = 'block';
+        }
+
+        // --- API HELPERS ---
+        async function api(endpoint, method = 'GET', body = null) {
+            const tg = window.Telegram.WebApp;
+            const uid = tg.initDataUnsafe?.user?.id;
+
+            document.getElementById('loader').style.display = 'flex';
+            try {
+                const headers = {
+                    'X-User-ID': uid ? uid.toString() : '0' // 0 might fail auth if we enforce strict admin
+                };
+                if (body) headers['Content-Type'] = 'application/json';
+
+                const res = await fetch(API_URL + endpoint, {
+                    method,
+                    headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+                return await res.json();
+            } catch (e) {
+                alert("Error: " + e.message);
+                return null;
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // --- DASHBOARD ---
+        async function loadDashboard() {
+            const data = await api('/stats');
+            if (data) {
+                document.getElementById('cnt-questions').innerText = data.total_questions;
+                document.getElementById('cnt-users').innerText = data.total_users;
+                document.getElementById('cnt-active').innerText = data.active_users;
+                document.getElementById('cnt-inactive').innerText = data.inactive_users;
+            }
+        }
+
+        // --- SUBJECTS ---
+        let allSubjects = [];
+        async function loadSubjects() {
+            const data = await api('/subjects');
+            if (data) {
+                allSubjects = data;
+                // Update Selects
+                const sel = document.getElementById('add-subject');
+                const searchSel = document.getElementById('search-subject');
+                sel.innerHTML = '';
+                searchSel.innerHTML = '<option value="">Barcha Fanlar</option>';
+
+                data.forEach(s => {
+                    sel.innerHTML += `<option value="${s}">${s}</option>`;
+                    searchSel.innerHTML += `<option value="${s}">${s}</option>`;
+                });
+
+                // Update List
+                const list = document.getElementById('subjects-list');
+                list.innerHTML = '';
+                data.forEach(s => {
+                    list.innerHTML += `
+                        <div class="list-item">
+                            <span class="list-title">${s}</span>
+                            <button class="btn danger" onclick="deleteSubject('${s}')" style="padding:5px 10px; font-size:12px;">O‘chirish</button>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        async function addSubject() {
+            const name = document.getElementById('new-subj').value.trim();
+            if (!name) return;
+            const res = await api('/subjects', 'POST', { name });
+            if (res && res.success) {
+                document.getElementById('new-subj').value = '';
+                loadSubjects();
+            } else {
+                alert(res?.error || "Xatolik");
+            }
+        }
+
+        async function deleteSubject(name) {
+            if (!confirm("Aniq o‘chirmoqchimisiz?")) return;
+            const res = await api('/subjects?name=' + encodeURIComponent(name), 'DELETE');
+            if (res && res.success) loadSubjects();
+        }
+
+        // --- QUESTIONS ---
+        async function addSingleQuestion() {
+            const subject = document.getElementById('add-subject').value;
+            const question = document.getElementById('q-text').value.trim();
+            const opt1 = document.getElementById('q-opt1').value.trim();
+            const opt2 = document.getElementById('q-opt2').value.trim();
+            const opt3 = document.getElementById('q-opt3').value.trim();
+            const opt4 = document.getElementById('q-opt4').value.trim();
+            const correct = parseInt(document.getElementById('q-correct').value);
+
+            if (!question || !opt1 || !opt2 || !opt3 || !opt4) {
+                alert("Barcha maydonlarni to‘ldiring!");
+                return;
+            }
+
+            const res = await api('/questions/add', 'POST', {
+                subject, question, options: [opt1, opt2, opt3, opt4], correct_option: correct
+            });
+
+            if (res && res.success) {
+                alert("✅ Qo‘shildi");
+                // Clear form
+                document.getElementById('q-text').value = "";
+                document.getElementById('q-opt1').value = "";
+                document.getElementById('q-opt2').value = "";
+                document.getElementById('q-opt3').value = "";
+                document.getElementById('q-opt4').value = "";
+            } else {
+                alert(res?.error || "Xatolik");
+            }
+        }
+
+        async function addBulkText() {
+            const subject = document.getElementById('add-subject').value;
+            const text = document.getElementById('bulk-text').value.trim();
+            if (!text) return;
+
+            const res = await api('/questions/bulk_txt', 'POST', { subject, text });
+            if (res) {
+                alert(`✅ ${res.added} qo‘shildi, ⚠️ ${res.errors} xato`);
+            }
+        }
+
+        async function addBulkPairs() {
+            const subject = document.getElementById('add-subject').value;
+            const qContent = document.getElementById('file-q-content').value.trim();
+            const aContent = document.getElementById('file-a-content').value.trim();
+
+            if (!qContent || !aContent) {
+                alert("Ikkala maydonni ham to‘ldiring");
+                return;
+            }
+
+            const res = await api('/questions/bulk_pairs', 'POST', { subject, questions: qContent, answers: aContent });
+            if (res) {
+                alert(`✅ ${res.added} qo‘shildi, ⚠️ ${res.errors} xato`);
+            }
+        }
+
+        async function searchQuestions() {
+            const q = document.getElementById('search-q').value.trim();
+            const subj = document.getElementById('search-subject').value;
+
+            const res = await api(`/questions/search?q=${encodeURIComponent(q)}&subject=${encodeURIComponent(subj)}`);
+            const div = document.getElementById('search-results');
+            div.innerHTML = '';
+
+            if (res && res.length > 0) {
+                res.forEach(item => {
+                    div.innerHTML += `
+                        <div class="list-item">
+                            <div class="list-info">
+                                <div class="list-title">[${item.subject}] ID: ${item.id}</div> 
+                                <div>${item.question}</div>
+                                <div class="list-sub">Javob: ${item.options[item.correct_option_id]}</div>
+                            </div>
+                            <button class="btn danger" onclick="deleteQuestion(${item.id})">🗑</button>
+                        </div>
+                    `;
+                });
+            } else {
+                div.innerHTML = '<p style="text-align:center;color:#666;">Topilmadi</p>';
+            }
+        }
+
+        async function deleteQuestion(id) {
+            if (!confirm("O‘chirasizmi?")) return;
+            const res = await api('/questions/delete?id=' + id, 'DELETE');
+            if (res && res.success) {
+                searchQuestions(); // refresh
+            }
+        }
+
+        // --- TANGA (WITHDRAWALS) ---
+        async function loadRate() {
+            const res = await api('/rate'); // reuse existing or new
+            if (res) document.getElementById('coin-rate').value = res.rate;
+        }
+
+        async function saveRate() {
+            const r = parseFloat(document.getElementById('coin-rate').value);
+            await api('/rate', 'POST', { rate: r });
+            alert("Saqlandi");
+        }
+
+        async function loadWithdrawals() {
+            const res = await api('/withdrawals');
+            const list = document.getElementById('withdrawals-list');
+            list.innerHTML = '';
+
+            if (res && res.length > 0) {
+                res.forEach(w => {
+                    list.innerHTML += `
+                        <div class="list-item">
+                            <div class="list-info">
+                                <div class="list-title">User: ${w.username || w.user_id}</div>
+                                <div>${w.amount_coins} coins -> ${w.amount_money} UZS</div>
+                                <div class="list-sub">${w.created_at}</div>
+                            </div>
+                            <div style="display:flex; gap:5px; flex-direction:column;">
+                                <button class="btn" style="background:var(--success); padding:5px;" onclick="decideWithdrawal(${w.id}, 'approved')">Tasdiqlash</button>
+                                <button class="btn danger" style="padding:5px;" onclick="decideWithdrawal(${w.id}, 'rejected')">Rad etish</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                list.innerHTML = '<p style="text-align:center;">Arizalar yo‘q</p>';
+            }
+        }
+
+        async function decideWithdrawal(id, status) {
+            if (!confirm(status === 'approved' ? "Tasdiqlaysizmi?" : "Rad etasizmi?")) return;
+            const res = await api('/withdrawals/decision', 'POST', { id, status });
+            if (res && res.success) loadWithdrawals();
+        }
+
+        // INITIAL LOAD
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        loadDashboard();
+
+    </script>
+</body>
+
+</html>

@@ -1,5 +1,6 @@
 import asyncio
-from database import add_question, get_questions_count
+from bot.config import BOT_TOKEN 
+from database import add_question, get_questions_count, init_db
 
 INITIAL_QUESTIONS = {
     "english": [
@@ -94,6 +95,7 @@ INITIAL_QUESTIONS = {
 
 async def init_questions():
     """Boshlang'ich savollarni qo'shish"""
+    await init_db()
     for subject, questions in INITIAL_QUESTIONS.items():
         count = await get_questions_count(subject)
         if count == 0:

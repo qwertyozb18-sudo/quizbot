@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #000000);
+            --card-bg: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            --button-color: var(--tg-theme-button-color, #2481cc);
+            --button-text: var(--tg-theme-button-text-color, #ffffff);
+            --hint-color: var(--tg-theme-hint-color, #999999);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            padding-bottom: 70px;
+            /* Space for bottom nav */
+        }
+
+        .container {
+            padding: 16px;
+            display: none;
+            /* Hidden by default */
+        }
+
+        .active-section {
+            display: block;
+        }
+
+        h1,
+        h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .stat-item {
+            background: var(--bg-color);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--hint-color);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* Rank List */
+        .rank-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .rank-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .rank-item:last-child {
+            border-bottom: none;
+        }
+
+        .rank-pos {
+            width: 30px;
+            font-weight: bold;
+            color: var(--button-color);
+        }
+
+        .rank-user {
+            flex-grow: 1;
+            font-weight: 500;
+        }
+
+        .rank-score {
+            font-weight: bold;
+        }
+
+        /* Tabs (Top for Ranking) */
+        .tabs {
+            display: flex;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .tab.active {
+            background: var(--bg-color);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--card-bg);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            font-size: 12px;
+            color: var(--hint-color);
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .nav-item.active {
+            color: var(--button-color);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        /* Exchange Form */
+        input.input-field {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        input.input-field:focus {
+            border-color: var(--button-color);
+        }
+
+        .main-btn {
+            background-color: var(--button-color);
+            color: var(--button-text);
+            border: none;
+            padding: 14px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .main-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+    <title>QuizBot App</title>
+</head>
+
+<body>
+
+    <div id="loading">Loading...</div>
+
+    <!-- DASHBOARD SECTION -->
+    <div id="section-dashboard" class="container active-section">
+        <h1>👤 Kabinet</h1>
+
+        <div class="card">
+            <div style="display:flex; align-items:center;">
+                <div style="flex-grow:1;">
+                    <div style="font-size:18px; font-weight:bold;" id="dash-name">User</div>
+                    <div style="color: grey; font-size:14px;" id="dash-id">ID: 000000</div>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-size:24px; font-weight:bold; color:orange;">🪙 <span
+                            id="dash-coins">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Statistika</h2>
+            <div class="stat-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Jami</div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Reyting</div>
+                    <div class="stat-value" id="stat-rank">#--</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">To'g'ri</div>
+                    <div class="stat-value" style="color:green;" id="stat-correct">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Xato</div>
+                    <div class="stat-value" style="color:red;" id="stat-incorrect">0</div>
+                </div>
+            </div>
+            <div style="margin-top:10px; text-align:center; font-size:14px;">
+                Umumiy ball: <b id="stat-score">0</b>
+            </div>
+        </div>
+    </div>
+
+    <!-- RANKING SECTION -->
+    <div id="section-rating" class="container">
+        <h1>🏆 Reyting</h1>
+
+        <div class="tabs">
+            <div class="tab" onclick="loadRank('week', this)">Haftalik</div>
+            <div class="tab" onclick="loadRank('month', this)">Oylik</div>
+            <div class="tab active" onclick="loadRank('all', this)">Umumiy</div>
+        </div>
+
+        <div class="card">
+            <ul class="rank-list" id="rank-list">
+                <!-- Items injected here -->
+                <div style="text-align:center; padding:20px;">Yuklanmoqda...</div>
+            </ul>
+        </div>
+    </div>
+
+    <!-- EXCHANGE SECTION -->
+    <div id="section-exchange" class="container">
+        <h1>💸 Almashtirish</h1>
+
+        <div class="card">
+            <h2>Balans</h2>
+            <div style="text-align:center; margin-bottom: 20px;">
+                <span style="font-size:32px; font-weight:bold; color:orange;">🪙 <span id="ex-coins">0</span></span>
+            </div>
+            <div style="background:#eee; padding:10px; border-radius:6px; margin-bottom:15px; text-align:center;">
+                Kurs: <b id="ex-rate">100</b> tanga = <b>1</b> UZS
+            </div>
+
+            <p>Qancha almashtirmoqchisiz?</p>
+            <input type="number" id="ex-amount" class="input-field" placeholder="Masalan: 1000"
+                oninput="calculateExchange()">
+            <div style="margin-bottom:15px; font-size:14px; text-align:right;">
+                Qabul qilasiz: <b id="ex-receive">0.00</b> UZS
+            </div>
+
+            <button class="main-btn" id="btn-exchange" onclick="submitExchange()">So'rov yuborish</button>
+            <p id="ex-status" style="text-align:center; margin-top:10px; font-size:13px; color:green;"></p>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('dashboard', this)">
+            <span class="nav-icon">👤</span>
+            Kabinet
+        </div>
+        <div class="nav-item" onclick="switchTab('rating', this)">
+            <span class="nav-icon">🏆</span>
+            Reyting
+        </div>
+        <div class="nav-item" onclick="switchTab('exchange', this)">
+            <span class="nav-icon">💸</span>
+            Exchange
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        // Use Telegram user ID. For local testing without Telegram, user defaults to mock.
+        const userId = tg.initDataUnsafe?.user?.id;
+
+        // BASE URL for API - assumes API is served from the same host
+        // If testing locally, you might access via file:// which won't work for API fetch
+        // In real deploy, standard fetch('/') works. 
+        // For local development, we set absolute if needed, but relative is best.
+        const API_URL = "/api";
+
+        let currentRate = 100;
+        let userBalance = 0;
+
+        function showLoading() { document.getElementById('loading').style.display = 'block'; }
+        function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+
+        // --- NAVIGATION ---
+        function switchTab(screenName, navEl) {
+            document.querySelectorAll('.container').forEach(el => el.classList.remove('active-section'));
+            document.getElementById('section-' + screenName).classList.add('active-section');
+
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (navEl) navEl.classList.add('active');
+
+            if (screenName === 'dashboard') loadDashboard();
+            if (screenName === 'rating') loadRank('all');
+            if (screenName === 'exchange') loadExchange();
+        }
+
+        // --- API HELPERS ---
+        async function fetchAPI(endpoint, options = {}) {
+            // Add user_id header for auth mock
+            if (!options.headers) options.headers = {};
+            if (userId) options.headers['X-User-ID'] = userId;
+
+            try {
+                const res = await fetch(API_URL + endpoint, options);
+                return await res.json();
+            } catch (e) {
+                console.error(e);
+                return null;
+            }
+        }
+
+        // --- DASHBOARD ---
+        async function loadDashboard() {
+            showLoading();
+            const data = await fetchAPI('/user/stats');
+            hideLoading();
+
+            if (data) {
+                // Info
+                document.getElementById('dash-name').textContent = data.user.name;
+                document.getElementById('dash-id').textContent = "ID: " + data.user.id;
+                document.getElementById('dash-coins').textContent = data.user.coins;
+
+                // My global vars
+                userBalance = data.user.coins;
+
+                // Stats
+                document.getElementById('stat-total').textContent = data.stats.total;
+                document.getElementById('stat-correct').textContent = data.stats.correct;
+                document.getElementById('stat-incorrect').textContent = data.stats.incorrect;
+                document.getElementById('stat-score').textContent = data.user.score;
+                document.getElementById('stat-rank').textContent = data.rank ? "#" + data.rank : "N/A";
+            }
+        }
+
+        // --- RANKING ---
+        let currentRankTab = 'all';
+        async function loadRank(period, tabEl) {
+            if (tabEl) {
+                document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+                tabEl.classList.add('active');
+            }
+            currentRankTab = period;
+
+            // show skeleton or loading
+            document.getElementById('rank-list').innerHTML = '<div style="text-align:center; padding:20px;">Yuklanmoqda...</div>';
+
+            const list = await fetchAPI('/rankings?period=' + period);
+            const container = document.getElementById('rank-list');
+            container.innerHTML = '';
+
+            if (list && list.length > 0) {
+                list.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'rank-item';
+
+                    let medal = index + 1;
+                    if (index === 0) medal = '🥇';
+                    if (index === 1) medal = '🥈';
+                    if (index === 2) medal = '🥉';
+
+                    li.innerHTML = `
+                        <div class="rank-pos">${medal}</div>
+                        <div class="rank-user">${item.name}</div>
+                        <div class="rank-score">${item.score}</div>
+                    `;
+                    container.appendChild(li);
+                });
+            } else {
+                container.innerHTML = '<div style="text-align:center; padding:20px;">Ro\'yxat bo\'sh.</div>';
+            }
+        }
+
+        // --- EXCHANGE ---
+        async function loadExchange() {
+            // refresh balance
+            const data = await fetchAPI('/user/stats'); // reuse stats to get balance/rate
+            if (data) {
+                userBalance = data.user.coins;
+                document.getElementById('ex-coins').textContent = userBalance;
+
+                // Fetch rate specifically if needed, or assume rate in stats
+                // For now let's hit exchange info endpoint
+                const exData = await fetchAPI('/exchange/info');
+                if (exData) {
+                    currentRate = exData.rate;
+                    document.getElementById('ex-rate').textContent = currentRate;
+                }
+            }
+        }
+
+        function calculateExchange() {
+            const val = document.getElementById('ex-amount').value;
+            const amount = parseInt(val) || 0;
+            const money = amount / currentRate;
+            document.getElementById('ex-receive').textContent = money.toFixed(2);
+
+            const btn = document.getElementById('btn-exchange');
+            if (amount > 0 && amount <= userBalance) {
+                btn.disabled = false;
+                document.getElementById('ex-status').innerText = "";
+            } else {
+                btn.disabled = true;
+                if (amount > userBalance) document.getElementById('ex-status').innerText = "Mablag' yetarli emas";
+                else document.getElementById('ex-status').innerText = "";
+            }
+        }
+
+        async function submitExchange() {
+            const val = document.getElementById('ex-amount').value;
+            const amount = parseInt(val);
+            if (!amount || amount <= 0) return;
+
+            showLoading();
+            const res = await fetchAPI('/exchange/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: amount })
+            });
+            hideLoading();
+
+            if (res && res.success) {
+                document.getElementById('ex-status').style.color = "green";
+                document.getElementById('ex-status').innerText = "Muvaffaqiyatli yuborildi!";
+                document.getElementById('ex-amount').value = "";
+                loadExchange(); // refresh balance
+                Telegram.WebApp.showAlert("✅ So'rov muvaffaqiyatli yuborildi. Admin tasdiqlashini kuting.");
+            } else {
+                document.getElementById('ex-status').style.color = "red";
+                document.getElementById('ex-status').innerText = res?.error || "Xatolik yuz berdi";
+            }
+        }
+
+        // Initial Load
+        loadDashboard();
+
+    </script>
+</body>
+
+</html>
