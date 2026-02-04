@@ -4,3 +4,4 @@ python-dotenv==1.0.1
 apscheduler==3.10.4
 aiohttp==3.9.3
 aiohttp-cors==0.7.0
+aiosqlite==0.19.0
