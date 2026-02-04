@@ -11,7 +11,7 @@ from database import (
     get_group_rating, get_global_rating, get_top_users, reset_all_coins, get_user_rank,
     get_user_stats, get_ranking_by_period, get_exchange_rate, create_withdrawal, get_or_create_user
 )
-from bot.config import ADMIN_IDS, CHANNEL_ID
+from bot.config import ADMIN_IDS, CHANNEL_ID, WEBAPP_URL
 from bot.loader import bot
 
 router = Router()
@@ -46,7 +46,7 @@ async def cmd_start(message: types.Message):
     # We just provide the button request.
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📱 Kabinet & Reyting (Mini App)", web_app=WebAppInfo(url="https://google.com"))],
+        [InlineKeyboardButton(text="📱 Kabinet & Reyting (Mini App)", web_app=WebAppInfo(url=WEBAPP_URL))],
         [InlineKeyboardButton(text="📚 Fanlar ro'yxati (Info)", callback_data="info_btn")]
     ])
 
