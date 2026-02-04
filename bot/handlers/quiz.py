@@ -5,7 +5,7 @@ from aiogram.filters import Command
 from aiogram.types import PollAnswer
 from bot.loader import bot
 from bot.session import active_quizzes
-from bot.utils import custom_subjects
+from database import get_custom_subjects_list
 from database import (
     get_questions, create_quiz_session, save_user_answer,
     get_session_results, close_session, get_or_create_user
@@ -53,8 +53,9 @@ async def handle_dynamic_quiz(message: types.Message):
     
     if cmd != "/quiz":
         subject = cmd.replace("/quiz", "")
+        custom_subjects = await get_custom_subjects_list()
         if subject not in ["eng", "ru", "math", "fiz"] and subject not in custom_subjects:
-            subjects = ["eng", "ru", "math", "fiz"] + list(custom_subjects.keys())
+            subjects = ["eng", "ru", "math", "fiz"] + custom_subjects
             await message.answer(f"❌ Fan topilmadi: {subject}\nMavjud fanlar: {', '.join(subjects)}")
             return
         
