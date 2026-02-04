@@ -14,7 +14,10 @@ if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN topilmadi! .env faylida BOT_TOKEN ni sozlang.")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "quizbot-production-7f50.up.railway.app") # Default/Fallback
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://quizbot-production-7f50.up.railway.app") # Default/Fallback
+
+if WEBAPP_URL and not WEBAPP_URL.startswith("https://"):
+    WEBAPP_URL = "https://" + WEBAPP_URL
 if not DATABASE_URL:
     # Fallback for local testing or raise error? Use sqlite path as default? No, migrating to pg directly.
     # But for now let's just warn or default to None if we handle it in db.py
