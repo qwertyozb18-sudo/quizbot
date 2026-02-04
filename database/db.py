@@ -45,7 +45,7 @@ def _convert_to_sqlite(query: str, args: tuple) -> (str, tuple):
     # Handling specific generic interval
     # We will try to catch specific patterns used in this project
     new_query = re.sub(r"NOW\(\)\s*-\s*INTERVAL\s*'(\d+\s+\w+)'", r"datetime('now', '-\1')", new_query, flags=re.IGNORECASE)
-    new_query = re.sub(r"NOW\(\)", "datetime('now')", new_query, flags=re.IGNORECASE)
+    new_query = re.sub(r"NOW\(\)", "CURRENT_TIMESTAMP", new_query, flags=re.IGNORECASE)
     
     return new_query, args
 
