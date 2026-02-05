@@ -8,6 +8,7 @@ ADMIN_IDS_ENV = os.getenv("ADMIN_IDS", "")
 CHANNEL_ID_ENV = os.getenv("CHANNEL_ID")
 
 ADMIN_IDS = [aid.strip() for aid in ADMIN_IDS_ENV.split(",") if aid.strip()]
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "1234")
 CHANNEL_ID = int(CHANNEL_ID_ENV) if CHANNEL_ID_ENV else None
 
 if not BOT_TOKEN:

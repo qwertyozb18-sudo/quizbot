@@ -5,16 +5,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup 
 import aiosqlite
 
-from bot.config import ADMIN_IDS, BOT_TOKEN 
+from bot.config import ADMIN_IDS, BOT_TOKEN, ADMIN_PASSWORD, WEBAPP_URL
 from bot.states import (
     AddProjectStates, AddQuestionStates, AddQuestionsStates,
-    DeleteQuestionStates, DeleteProjectStates
+    DeleteQuestionStates, DeleteProjectStates, AdminAuthStates
 )
 from bot.utils import get_all_subjects
 from database import (
-    add_question, search_questions, delete_question, 
     set_exchange_rate, get_pending_withdrawals, update_withdrawal_status,
-    get_custom_subjects_list, add_custom_subject, remove_custom_subject
+    get_custom_subjects_list, add_custom_subject, remove_custom_subject,
+    check_is_admin_db
 )
 
 router = Router()
@@ -77,6 +77,41 @@ async def process_withdrawal_decision(message: types.Message):
     # Notify user (optional, requires storing user_id from msg logic or fetching from db again)
     # Ideally update_withdrawal_status should return user_id to notify. 
     # For now, simplistic.
+    # For now, simplistic.
+
+# ==== ADMIN AUTH ====
+@router.message(Command("adminpanel"))
+async def cmd_admin_panel_auth(message: types.Message, state: FSMContext):
+    # Always respond with the generic message to hide existence, 
+    # but strictly speaking if it's not for "all", we might want to check admin first?
+    # User said: "barcha user uchun... ammo shu sozdan song admin password..."
+    # So everyone sees the prompt.
+    
+    await message.answer("Bu buyruq faqat adminlar uchun!")
+    await state.set_state(AdminAuthStates.waiting_for_password)
+
+@router.message(AdminAuthStates.waiting_for_password)
+async def process_admin_password(message: types.Message, state: FSMContext):
+    password = message.text.strip()
+    uid = message.from_user.id
+    
+    # Check Admin permission (Environment or DB)
+    is_admin_env = str(uid) in ADMIN_IDS
+    is_admin_db = await check_is_admin_db(uid)
+    
+    if (is_admin_env or is_admin_db) and password == ADMIN_PASSWORD:
+        # Success
+        kb = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="Admin Panel", web_app=types.WebAppInfo(url=f"{WEBAPP_URL}/admin"))]
+        ])
+        await message.answer("✅ Admin Panel Web App:", reply_markup=kb)
+    else:
+        # Failed - silent or error? User requirement implies prompt -> result.
+        # "password kiritsa admin panel ... chiqishi kerak"
+        # If wrong password, maybe just nothing or "Xato".
+        await message.answer("❌ Parol yoki ruxsat xato.")
+    
+    await state.clear()
 
 # ==== ADMIN: addproject, addquestion (single), addquestions (bulk) ====
 @router.message(Command("addproject"))
