@@ -5,5 +5,6 @@ from .db import (
     get_top_users, reset_all_coins, get_user_rank, search_questions, delete_question,
     get_user_stats, get_ranking_by_period, get_exchange_rate,
     set_exchange_rate, create_withdrawal, get_pending_withdrawals, update_withdrawal_status,
-    get_admin_dashboard_stats, get_custom_subjects_list, add_custom_subject, remove_custom_subject
+    get_admin_dashboard_stats, get_custom_subjects_list, add_custom_subject, remove_custom_subject,
+    check_is_admin_db, add_admin, remove_admin, get_admins_list, get_setting, set_setting
 )
