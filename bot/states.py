@@ -21,3 +21,6 @@ class DeleteQuestionStates(StatesGroup):
 class DeleteProjectStates(StatesGroup):
     waiting_for_project_name = State()
     confirm_delete = State()
+
+class AdminAuthStates(StatesGroup):
+    waiting_for_password = State()
