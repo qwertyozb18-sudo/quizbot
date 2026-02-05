@@ -13,7 +13,8 @@ from database import (
     get_ranking_by_period, get_exchange_rate, create_withdrawal,
     get_group_rating, get_admin_dashboard_stats, search_questions,
     delete_question, add_question, get_pending_withdrawals, update_withdrawal_status,
-    set_exchange_rate, get_custom_subjects_list, add_custom_subject, remove_custom_subject
+    set_exchange_rate, get_custom_subjects_list, add_custom_subject, remove_custom_subject,
+    check_is_admin_db, add_admin, remove_admin, get_admins_list, get_setting, set_setting
 )
 from bot.config import ADMIN_IDS
 
@@ -34,10 +35,11 @@ def get_user_id_from_header(request):
         return None
     return int(uid)
 
-def is_admin(request):
+async def is_admin(request):
     uid = get_user_id_from_header(request)
     if not uid: return False
-    return str(uid) in ADMIN_IDS
+    if str(uid) in ADMIN_IDS: return True
+    return await check_is_admin_db(uid)
 
 # --- CLIENT API ---
 async def api_user_stats(request):
@@ -100,6 +102,10 @@ async def api_exchange_request(request):
     
     if amount <= 0:
         return web.json_response({"error": "Invalid amount"}, status=400)
+    
+    min_wd = int(await get_setting('min_withdrawal', '1000'))
+    if amount < min_wd:
+        return web.json_response({"error": f"Minimal yechish summasi: {min_wd} tanga"}, status=400)
         
     rate = await get_exchange_rate()
     money = amount / rate
@@ -119,12 +125,12 @@ async def api_exchange_request(request):
 
 # --- ADMIN API ---
 async def api_admin_stats(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     stats = await get_admin_dashboard_stats()
     return web.json_response(stats)
 
 async def api_admin_subjects(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     
     if request.method == 'GET':
         subjects = await get_custom_subjects_list()
@@ -145,7 +151,7 @@ async def api_admin_subjects(request):
         return web.json_response({"success": True})
 
 async def api_admin_add_question(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     data = await request.json()
     
     try:
@@ -162,7 +168,7 @@ async def api_admin_add_question(request):
         return web.json_response({"success": False, "error": str(e)})
 
 async def api_admin_bulk_txt(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     data = await request.json()
     subject = data.get('subject')
     text = data.get('text', '')
@@ -201,7 +207,7 @@ async def api_admin_bulk_txt(request):
     return web.json_response({"added": added, "errors": errors})
 
 async def api_admin_bulk_pairs(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     data = await request.json()
     
     subject = data.get('subject')
@@ -279,7 +285,7 @@ async def api_admin_bulk_pairs(request):
     return web.json_response({"added": added, "errors": errors})
 
 async def api_admin_search(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     
     q = request.query.get('q', '')
     subj = request.query.get('subject')
@@ -302,7 +308,7 @@ async def api_admin_search(request):
     return web.json_response(res)
 
 async def api_admin_delete_question(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     qid = request.query.get('id')
     if qid and qid.isdigit():
         await delete_question(int(qid))
@@ -310,7 +316,7 @@ async def api_admin_delete_question(request):
     return web.json_response({"error": "Invalid ID"})
 
 async def api_admin_withdrawals(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     rows = await get_pending_withdrawals()
     res = []
     for r in rows:
@@ -326,7 +332,7 @@ async def api_admin_withdrawals(request):
     return web.json_response(res)
 
 async def api_admin_withdrawal_decision(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     data = await request.json()
     wid = data.get('id')
     status = data.get('status') # approved/rejected
@@ -338,7 +344,7 @@ async def api_admin_withdrawal_decision(request):
     return web.json_response({"success": True})
 
 async def api_admin_rate(request):
-    if not is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
     
     if request.method == 'POST':
         data = await request.json()
@@ -351,7 +357,44 @@ async def api_admin_rate(request):
             
     # GET
     rate = await get_exchange_rate()
-    return web.json_response({"rate": rate})
+    min_wd = await get_setting('min_withdrawal', '1000')
+    return web.json_response({"rate": rate, "min_withdrawal": min_wd})
+
+async def api_admin_settings(request):
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    if request.method == 'POST':
+        data = await request.json()
+        key = data.get('key')
+        val = data.get('value')
+        if key and val:
+            await set_setting(key, val)
+            return web.json_response({"success": True})
+        return web.json_response({"error": "Invalid data"})
+    return web.json_response({"error": "Method not allowed"})
+
+async def api_admin_manage_admins(request):
+    if not await is_admin(request): return web.json_response({"error": "Forbidden"}, status=403)
+    
+    if request.method == 'GET':
+        admins = await get_admins_list()
+        # Merge with env logic for display? Or just show DB admins.
+        # Let's show DB admins.
+        return web.json_response(admins)
+        
+    if request.method == 'POST':
+        data = await request.json()
+        uid = data.get('user_id')
+        if uid:
+            await add_admin(int(uid))
+            return web.json_response({"success": True})
+        return web.json_response({"error": "Invalid ID"})
+        
+    if request.method == 'DELETE':
+        uid = request.query.get('user_id')
+        if uid and uid.isdigit():
+            await remove_admin(int(uid))
+            return web.json_response({"success": True})
+        return web.json_response({"error": "Invalid ID"})
 
 
 # --- APP SETUP ---
@@ -410,6 +453,11 @@ async def main():
     
     app.router.add_get('/api/admin/rate', api_admin_rate)
     app.router.add_post('/api/admin/rate', api_admin_rate)
+    app.router.add_post('/api/admin/settings', api_admin_settings)
+    
+    app.router.add_get('/api/admin/helpers', api_admin_manage_admins)
+    app.router.add_post('/api/admin/helpers', api_admin_manage_admins)
+    app.router.add_delete('/api/admin/helpers', api_admin_manage_admins)
     
     for route in list(app.router.routes()):
         cors.add(route)

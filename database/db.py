@@ -223,8 +223,51 @@ async def init_db():
 
     # Values
     await execute("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT(key) DO NOTHING", 'exchange_rate', '100')
-    
+    await execute("INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT(key) DO NOTHING", 'min_withdrawal', '1000') # Default min withdrawal
+
+    # Create ADMINS table
+    await execute('''CREATE TABLE IF NOT EXISTS admins (
+        user_id BIGINT PRIMARY KEY,
+        created_at TIMESTAMP DEFAULT NOW()
+    )''')
+
     logger.info("✅ Database tables checked/created.")
+
+
+# === ADMIN MANAGEMENT ===
+async def add_admin(user_id: int):
+    # Ensure user exists in users table first if needed, but foreign key constraint is not strictly enforced here for flexibility
+    # But usually good to refer to users. Let's assume standalone or FK if we updated schema.
+    # Current schema doesn't have FK on admins(user_id) to users(user_id) based on my previous thought, 
+    # but I'll make it simple: just table of IDs.
+    if DB_TYPE == 'sqlite':
+        await execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", user_id)
+    else:
+        await execute("INSERT INTO admins (user_id) VALUES ($1) ON CONFLICT DO NOTHING", user_id)
+
+async def remove_admin(user_id: int):
+    await execute("DELETE FROM admins WHERE user_id = $1", user_id)
+
+async def get_admins_list():
+    rows = await fetch("SELECT user_id FROM admins")
+    return [r['user_id'] for r in rows]
+
+async def check_is_admin_db(user_id: int):
+    val = await fetchval("SELECT user_id FROM admins WHERE user_id = $1", user_id)
+    return val is not None
+
+async def get_setting(key: str, default: str = None):
+    val = await fetchval("SELECT value FROM settings WHERE key = $1", key)
+    return val if val is not None else default
+
+async def set_setting(key: str, value: str):
+    if DB_TYPE == 'sqlite':
+        await execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", key, str(value))
+    else:
+        await execute('''
+            INSERT INTO settings (key, value) VALUES ($1, $2)
+            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        ''', key, str(value))
 
 
 # === SUBJECTS FUNKSIYALARI ===
